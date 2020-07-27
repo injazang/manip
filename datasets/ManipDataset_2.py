@@ -11,22 +11,42 @@ from torchvision import transforms as tf
 from PIL import Image
 from torch.utils.data import Dataset
 import pandas as pd
+from io import BytesIO
+import jpegio.io
+import tempfile
 
-def randCrop(image: Image, mode='train') -> (Image):
-    w, h = image.width, image.height
+def randCrop(image: Image, im_c=None, mode='train') -> (Image):
     if mode=='train':
+        w, h = image.width, image.height
         left, upper = randint(0, w - 129)//8*8, randint(0, h - 129)//8*8
+        im = image.crop(box=[left, upper, left + 128, upper + 128])
+        if im_c is None:
+            return im
+        else:
+            im_c = np.array(im_c[upper:upper + 128, left:left + 128]).astype('int32')
+            return im, im_c
     else:
-        left, upper = (w-129) // 16 * 8, (h-129)//16 * 8
-    im = image.crop(box=[left, upper, left + 128, upper + 128])
-    return im
+        w, h = image.width, image.height
+        left, upper = (w-129)//16*8, (h - 129) // 16 * 8
+        im = image.crop(box=[left, upper, left + 128, upper + 128])
+        if im_c is None:
+            return im
+        else:
+            im_c = np.array(im_c[upper:upper + 128, left:left + 128]).astype('int32')
+            return im, im_c
 
+
+def jpeg_domain(path):
+    im = jpegio.read(path)
+
+
+    return im.coef_arrays[0]/1
 
 
 
 import io
 class ManipDataset(Dataset):
-    def __init__(self, datadir, csvs, num_labels=5, mode='train', transform=None, jpeg=False, yuv=False):
+    def __init__(self, datadir, csvs, num_labels =5, mode='train', transform=None, jpeg=False, yuv=False, coeff=True):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -36,7 +56,7 @@ class ManipDataset(Dataset):
         """
         self.mode = mode
         self.jpeg = jpeg
-        self.yuv=yuv
+        self.coeff= coeff
         if jpeg:
             self.dtypes ={'split':'string', 'name': 'string', 'manip': 'int64', 'type': 'int64', 'param': 'float32', 'jpeg' : 'int64'}
         else:
@@ -49,18 +69,27 @@ class ManipDataset(Dataset):
         self.transform = tf.ToTensor()
         self.num_labels = num_labels
         self.manip_types = [0,1,2,3,4]
-        self.types_per_manip = [5,4,2,4,5]
+        self.types_per_manip = [5,4,2,4,1]
 
     def compress(self, path, qf=None):
         name = os.path.basename(path).split('.')[0]
         folder = path.split('\\')[-2]
-        temp_dir = f'E:/Proposals/jpgs/{self.mode}'
+        temp_dir = f'E:\Proposals\jpgs\{self.mode}'
         im_name = os.path.join(temp_dir, f'{folder}_{name}.jpg')
 
+        #if not os.path.exists(im_name):
+        #    if qf is None:
+        #        qf = randrange(70, 100)
+        #im = Image.open(path)
+        #im.save(im_name, "JPEG", quality=np.int(qf), optimice=True)
 
         im = Image.open(im_name)
-        #im_c = jpeg_domain(im_name)
-        return im
+        if self.coeff:
+            im_c = jpeg_domain(im_name)
+            return im, im_c
+        else:
+            return im
+
     def select_label(self, manip, type):
         if self.num_labels==5:
             return manip
@@ -74,11 +103,18 @@ class ManipDataset(Dataset):
             im_c (tensor): quantized DCT coefficients (3, 8, 8, height/8, width/8)
             im_q (tensor): quantization table (3, 8, 8, 1, 1)
         '''
-        im = self.compress(path, jpeg)
-        im= randCrop(im, self.mode)
-        im = self.transform(im)
-        #im_c = torch.from_numpy(im_c).view(1, 128, 128)
-        return im
+        if self.coeff:
+            im, im_c = self.compress(path, jpeg)
+            im, im_c = randCrop(im, im_c, self.mode)
+            im = self.transform(im)
+            im_c = torch.from_numpy(im_c).int().view(1,128,128)
+            return im, im_c
+        else:
+            im = self.compress(path, jpeg)
+            im= randCrop(im, self.mode)
+            im = self.transform(im)
+            #im_c = torch.from_numpy(im_c).view(1, 128, 128)
+            return im
 
     def __len__(self):
         return len(self.csvs[0])
@@ -94,20 +130,29 @@ class ManipDataset(Dataset):
             if self.mode is not 'train' :
                 jpeg  = data[-1]
             else: jpeg = None
-            im = self.deq_loader(img_name, jpeg)
-            if im.size(0)==1:
+            label = np.array([0], dtype='float32')
+            label[0] = self.select_label(data[2], data[3])
+            labels.append(torch.from_numpy(label))
+
+            if self.coeff:
+                im,im_c = self.deq_loader(img_name, jpeg)
+                coeffs.append(im_c)
+            else:
+                im = self.deq_loader(img_name, jpeg)
+
+            c, w, h = im.size()
+            if c==1:
                 return None
             images.append(im)
 
-            label= np.array([0], dtype='float32')
-            manip = data[2]
-            type = data[3]
-            label[0] = self.select_label(manip, type)
-
-            labels.append(torch.from_numpy(label))
         images = torch.cat(images, dim=0)
         labels = torch.cat(labels, dim=0)
-        samples = {'im': images,'label': labels}
+        if self.coeff:
+            coeffs=torch.cat(coeffs, dim=0)
+            samples = {'im': images,'im_c':coeffs,'label': labels}
+        else:
+            samples = {'im': images, 'label': labels}
+
         return samples
 
 
@@ -124,7 +169,7 @@ class ConcatSampler(BatchSampler):
             before generate iteration.
     '''
 
-    def __init__(self, dataset, paired=False, sampler=BatchSampler, batch_size=32, drop_last=True, shuffle=True):
+    def __init__(self, dataset, paired=False, sampler=RandomSampler, batch_size=32, drop_last=True, shuffle=True):
         self.boundaries = dataset
         self.length = len(dataset)
         self.paired = paired

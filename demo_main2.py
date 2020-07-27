@@ -36,10 +36,12 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, mixer, use_mi
         # Create vaiables
         if torch.cuda.is_available():
             im = inputs['im'].cuda()
+            im_c = inputs['im_c'].cuda()
+
             target = inputs['label'].cuda().long().view(-1)
 
         # compute output
-        output = model(im, random.random())
+        output = model((im, im_c), random.random())
         loss = criterion(output, target)
 
         # measure accuracy and record loss
@@ -51,9 +53,9 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, mixer, use_mi
 
         # compute gradient and do step
         optimizer.zero_grad()
-        #with amp.scale_loss(loss, optimizer) as scaled_loss:
-        #    scaled_loss.backward()
-        loss.backward()
+        with amp.scale_loss(loss, optimizer) as scaled_loss:
+            scaled_loss.backward()
+        #loss.backward()
         optimizer.step()
 
         # measure elapsed time
@@ -107,10 +109,12 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True, confusion = Fa
         for batch_idx, inputs in enumerate(loader):
             if torch.cuda.is_available():
                 im = inputs['im'].cuda()
+                im_c = inputs['im_c'].cuda()
+
                 target = inputs['label'].cuda().long().view(-1)
 
             # compute output
-            output = model(im, 1)
+            output = model((im, im_c), 1)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
@@ -150,7 +154,7 @@ def set_lr_wd(optim, lr, wd):
 
 
 def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, epoch, best_error, lr=0.0, wd=0.0, fine_tune=False,
-          num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', mix_batch_prob=0, mix_spatial_prob=0, jpeg=True):
+          num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', mix_batch_prob=0, mix_spatial_prob=0, jpeg=True, coeff=False):
     # Define loader
     val_sampler = ConcatSampler(dataset=val_set, paired=False, sampler=RandomSampler, batch_size=batch_size,
                                 drop_last=True, shuffle=False)
@@ -176,7 +180,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
     for epoch in range(epoch, n_epochs):
 
         train_set = ManipDataset(datadir=val_set.datadir, csvs=train_csvs[epoch % 5:epoch % 5 + 1], mode='train',
-                                 num_labels=num_labels, transform=transforms.ToTensor(), jpeg=jpeg)
+                                 num_labels=num_labels, transform=transforms.ToTensor(), jpeg=jpeg, coeff=coeff)
         train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
                                       drop_last=True, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, batch_sampler=train_sampler,
@@ -221,7 +225,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                 'opt_state_dict': optimizer.state_dict(),
                 'lr' : lr,
                 'wd' : wd,
-                #'amp': amp.state_dict()
+                'amp': amp.state_dict()
             }, best_epoch_dir)
             count = 0
         else:
@@ -271,7 +275,7 @@ def test(model, test_set, logger, batch_size=32):
                       % (test_loss, test_error * 100))
 
 
-def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix',
+def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', coeff=False,
          jpeg=False):
     torch.cuda.set_device(gpu)
     # Settings
@@ -282,9 +286,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
     # Datasets
     val_set = ManipDataset(datadir=datadir, csvs=csvs[6:], mode='val', transform=transforms.ToTensor(),
-                           num_labels=num_labels, jpeg=jpeg)
+                           num_labels=num_labels, jpeg=jpeg, coeff=coeff )
     test_set = ManipDataset(datadir=datadir, csvs=csvs[5:6], mode='test', transform=transforms.ToTensor(),
-                            num_labels=num_labels, jpeg=jpeg)
+                            num_labels=num_labels, jpeg=jpeg, coeff=coeff)
 
     def training_mode():
         return model + '_' 'JPEG_' * jpeg + f'_{num_labels}_' + cur_time
@@ -309,8 +313,14 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
         from models.SRNet_DCT_scale import SRNet
         model = SRNet(scale=4, num_labels=num_labels, groups=False).cuda()
         optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
+
+    elif model is 'histnet':
+        from models.histNet import HistNet
+        model = HistNet(num_labels=num_labels).cuda()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
+
     logger.log_string(model.__str__())
-    #model, optimizer = amp.initialize(model, optimizer)
+    model, optimizer = amp.initialize(model, optimizer)
 
     # Optimizer
     epoch = 0
@@ -327,7 +337,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
         optimizer.load_state_dict(checkpoint['opt_state_dict'])
         lr = checkpoint['lr']
         wd = checkpoint['wd']
-        #amp.load_state_dict(checkpoint['amp'])
+        amp.load_state_dict(checkpoint['amp'])
         for state in optimizer.state.values():
             for k, v in state.items():
                 if isinstance(v, torch.Tensor):
@@ -339,7 +349,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
         # Train the model
         train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=csvs[0:5], val_set=val_set, test_set=test_set, num_labels=num_labels,
               logger=logger, model_dir=model_dir, epoch=epoch, best_error=best_error,
-              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg)
+              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=coeff)
 
 
     else:
@@ -349,8 +359,8 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    demo('dctnet', gpu=0, training='train', n_epochs=200, batch_size=100, use_mix='mix', num_labels=20,
-         jpeg=True, load=None)#'srnet_JPEG__20_20-07-25_04-40')
+    demo('histnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
+         jpeg=True, coeff=True, load=None)#'dctnet_JPEG__20_20-07-26_16-31')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     # fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True

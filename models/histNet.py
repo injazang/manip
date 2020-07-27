@@ -6,30 +6,30 @@ import torch_dct as dct
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1 ,padding=1):
     """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, dilation=dilation, stride=stride, padding=padding, padding_mode='replicate', groups=groups, bias=True)
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, dilation=dilation, stride=stride, padding=padding, padding_mode='replicate', groups=groups, bias=False)
 
 
 def conv1x1(in_planes, out_planes, stride=1, groups=1):
     """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, groups=groups, bias=True)
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, groups=groups, bias=False)
 
 
-class BlockType1(nn.Module):
+class Preprocess(nn.Module):
 
     def __init__(self, inplanes, planes, groups=1):
-        super(BlockType1, self).__init__()
+        super(Preprocess, self).__init__()
         self.conv1 = conv3x3(11, 64, groups=groups, dilation=8, padding=8)
-        self.bn1 = nn.BatchNorm2d(planes)
+        self.bn1 = nn.BatchNorm2d(64)
         self.conv2 = conv3x3(11, 64, groups=groups)
-        self.bn2 = nn.BatchNorm2d(planes)
+        self.bn2 = nn.BatchNorm2d(64)
         self.relu1= nn.ReLU(inplace=True)
-        self.conv3 = conv3x3(64, 32, groups=groups)
-        self.bn3 = nn.BatchNorm2d(planes)
+        self.conv3 = conv3x3(128, 64, groups=groups)
+        self.bn3 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU(inplace=True)
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_uniform_(m.weight)
-                nn.init.constant_(m.bias, 0.2)
+                #nn.init.constant_(m.bias, 0.2)
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, mean=0.0, std=0.01)
 
@@ -43,6 +43,22 @@ class BlockType1(nn.Module):
         out = self.conv3(out)
         out = self.bn3(out)
         out = self.relu2(out)
+        return out
+
+
+class BlockType1(nn.Module):
+
+    def __init__(self, inplanes, planes, groups=1):
+        super(BlockType1, self).__init__()
+        self.conv1 = conv3x3(inplanes, planes, groups=groups)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
         return out
 
 
@@ -108,19 +124,22 @@ class BlockType4(nn.Module):
 
 
 class HistNet(nn.Module):
-    def __init__(self, jpeg=False):
+    def __init__(self,num_labels=5 ,load=False):
         super(HistNet, self).__init__()
 
         self.inplanes = 11
         self.name = 'srnet'
-        self.layer1 = self._make_layer(BlockType1, [32], groups=1)
+        self.layer1 = self._make_layer(Preprocess, [64], groups=1)
+        self.layer2 = self._make_layer(BlockType2, [64, 64, 64, 64], groups=1)
+        self.layer3 = self._make_layer(BlockType3, [64, 128, 256], groups=1)
+        self.layer4 = self._make_layer(BlockType4, [512, ], groups=1)
         self.gvp = nn.AdaptiveAvgPool2d((1, 1))
-
-        self.fc = nn.Linear(32, 5, bias=False)
+        self.load=load
+        if not load:
+            self.fc = nn.Linear(512, num_labels, bias=False)
         self.sc = nn.Softmax()
         self.conv_weights = []
         self.non_conv_weights = []
-        self.jpeg=jpeg
 
         for name, param in self.named_parameters():
             if ('conv' in name) and ('weight' in name):
@@ -131,7 +150,7 @@ class HistNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_uniform_(m.weight)
-                nn.init.constant_(m.bias, 0.2)
+                #nn.init.constant_(m.bias, 0.2)
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, mean=0.0, std=0.01)
 
@@ -154,14 +173,18 @@ class HistNet(nn.Module):
             output.append(template)
         output = torch.cat(output,dim=1)
         return output
-    def forward(self, input):
-        img, im_c = input
+
+    def forward(self, input, prob):
+        im, im_c = input
         hist = self.hist(im_c, 10)
 
         x = self.layer1(hist)
-
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
         x = self.gvp(x)
         x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        logit = self.sc(x)
-        return logit
+        if not self.load:
+
+            x = self.fc(x)
+        return x
