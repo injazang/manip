@@ -344,7 +344,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
     if training == 'train':
         # Train the model
-        train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=f'{datadir}/*_jpg.txt', val_set=val_set, test_set=test_set, num_labels=num_labels,
+        train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=glob(f'{datadir}/*_jpg.txt'), val_set=val_set, test_set=test_set, num_labels=num_labels,
               logger=logger, model_dir=model_dir, epoch=epoch, best_error=best_error,
               n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=coeff)
 
