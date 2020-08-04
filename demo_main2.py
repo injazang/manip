@@ -9,7 +9,6 @@ from logger import Logger, AverageMeter, AUCMeter
 from datetime import datetime
 from glob import glob
 from torchvision import transforms
-from datasets import Mixer
 import numpy as np
 import random
 
@@ -161,7 +160,6 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
 
     val_loader = torch.utils.data.DataLoader(val_set, batch_sampler=val_sampler, pin_memory=(torch.cuda.is_available()),
                                              num_workers=4, collate_fn=collate_fn)
-    mixer = Mixer.mixer(use_mix=True)
     # Model on cuda
     if torch.cuda.is_available():
         model = model.cuda()
@@ -201,7 +199,6 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
             optimizer=optimizer,
             epoch=epoch,
             n_epochs=n_epochs,
-            mixer=mixer,
             use_mix=use_mix, mix_batch_prob=mix_batch_prob, mix_spatial_prob=mix_spatial_prob
         )
 
@@ -360,7 +357,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 if __name__ == '__main__':
     #demo('histnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
-    #     jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
+    #'     jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
