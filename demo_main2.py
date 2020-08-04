@@ -13,7 +13,7 @@ import numpy as np
 import random
 
 
-def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, mixer, use_mix='mix', print_freq=1, mix_batch_prob=0,
+def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix', print_freq=1, mix_batch_prob=0,
                 mix_spatial_prob=0):
     batch_time = AverageMeter()
     losses = AverageMeter()
