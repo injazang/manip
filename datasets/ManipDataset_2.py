@@ -46,7 +46,7 @@ def jpeg_domain(path):
 
 import io
 class ManipDataset(Dataset):
-    def __init__(self, datadir, csvs, num_labels =5, mode='train', transform=None, jpeg=False, yuv=False, coeff=True):
+    def __init__(self, datadir, csvs, num_labels =5, mode='train', transform=None, jpeg=True, yuv=False, coeff=False):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -73,7 +73,7 @@ class ManipDataset(Dataset):
 
     def compress(self, path, qf=None):
         name = os.path.basename(path).split('.')[0]
-        folder = path.split('/')[-2]
+        folder = path.split('\\')[-2]
         temp_dir = f'{self.datadir}/{self.mode}'
         im_name = os.path.join(temp_dir, f'{folder}_{name}.jpg')
 

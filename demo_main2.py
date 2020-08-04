@@ -12,9 +12,7 @@ from torchvision import transforms
 import numpy as np
 import random
 
-
-def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix', print_freq=1, mix_batch_prob=0,
-                mix_spatial_prob=0):
+def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix', print_freq=1, mix_batch_prob=0, mix_spatial_prob=0 ):
     batch_time = AverageMeter()
     losses = AverageMeter()
     error = AverageMeter()
@@ -23,7 +21,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
     model.train()
     criterion = torch.nn.CrossEntropyLoss()
 
-    if use_mix == 'mix':
+    if use_mix=='mix':
         print(f'mix_enabled, {mix_batch_prob},{mix_spatial_prob}')
     else:
         print('only paired')
@@ -35,14 +33,11 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
         # Create vaiables
         if torch.cuda.is_available():
             im = inputs['im'].cuda()
-            im_c = inputs['im_c'].cuda()
-
             target = inputs['label'].cuda().long().view(-1)
 
         # compute output
-        output = model((im, im_c), random.random())
+        output = model(im, random.random())
         loss = criterion(output, target)
-
         # measure accuracy and record loss
         batch_size = target.size(0)
         pred = output.cpu().squeeze()
@@ -52,8 +47,8 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
 
         # compute gradient and do step
         optimizer.zero_grad()
-        with amp.scale_loss(loss, optimizer) as scaled_loss:
-            scaled_loss.backward()
+        #with amp.scale_loss(loss, optimizer) as scaled_loss:
+        #    scaled_loss.backward()
         #loss.backward()
         optimizer.step()
 
@@ -75,30 +70,12 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
     # Return summary statistics
     return batch_time.avg, losses.avg, error.avg
 
-
-def test_epoch(model, loader, logger, print_freq=1, is_test=True, confusion = False):
-    def Rotate90sFlips(imgs, p, planes=[2, 3], k=0):
-        if p < 0.125:
-            return imgs.rot90(1, planes)
-        elif p < 0.25:
-            return imgs.rot90(2, planes)
-        elif p < 0.375:
-            return imgs.rot90(3, planes)
-        elif p < 0.5:
-            return imgs.flip(planes[0])
-        elif p < 0.625:
-            return imgs.rot90(1, planes).flip(planes[0])
-        elif p < 0.75:
-            return imgs.rot90(2, planes).flip(planes[0])
-        elif p < 0.875:
-            return imgs.flip(planes[0]).rot90(1, planes)
-        return imgs
+def test_epoch(model, loader, logger, print_freq=1, is_test=True):
 
     batch_time = AverageMeter()
     losses = AverageMeter()
     error = AverageMeter()
-    if confusion:
-        cmt = torch.zeros(20, 20, dtype=torch.int64)
+
     # Model on eval mode
     model.eval()
     criterion = torch.nn.CrossEntropyLoss()
@@ -108,24 +85,20 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True, confusion = Fa
         for batch_idx, inputs in enumerate(loader):
             if torch.cuda.is_available():
                 im = inputs['im'].cuda()
-                im_c = inputs['im_c'].cuda()
-
                 target = inputs['label'].cuda().long().view(-1)
 
+
             # compute output
-            output = model((im, im_c), 1)
+            output = model(im, 1)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
             batch_size = target.size(0)
-            pred = output.cpu().squeeze().argmax(dim=1)
-            target = target.cpu().squeeze()
-            error.update(torch.ne(pred, target).sum().item() / (batch_size),
+            pred = output.cpu().squeeze()
+            error.update(torch.ne(pred.argmax(dim=1), target.cpu().squeeze()).sum().item() / (batch_size),
                          batch_size)
             losses.update(loss.item(), batch_size)
-            if confusion:
-                for i in range(batch_size):
-                    cmt[target[i], pred[i]] += 1
+
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -144,7 +117,6 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True, confusion = Fa
             del loss, output, im, target
     # Return summary statistics
     return batch_time.avg, losses.avg, error.avg
-
 
 def set_lr_wd(optim, lr, wd):
     for param_group in optim.param_groups:
@@ -178,7 +150,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
     for epoch in range(epoch, n_epochs):
 
         train_set = ManipDataset(datadir=val_set.datadir, csvs=train_csvs[epoch % 5:epoch % 5 + 1], mode='train',
-                                 num_labels=num_labels, transform=transforms.ToTensor(), jpeg=jpeg, coeff=coeff)
+                                 num_labels=num_labels, transform=transforms.ToTensor(), jpeg=jpeg)
         train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
                                       drop_last=True, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, batch_sampler=train_sampler,
@@ -272,7 +244,7 @@ def test(model, test_set, logger, batch_size=32):
                       % (test_loss, test_error * 100))
 
 
-def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', coeff=False, datadir='',
+def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', datadir='',
          jpeg=False):
     torch.cuda.set_device(gpu)
     # Settings
@@ -283,9 +255,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     print(csvs)
     # Datasets
     val_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/val.txt'], mode='val', transform=transforms.ToTensor(),
-                           num_labels=num_labels, jpeg=jpeg, coeff=coeff )
+                           num_labels=num_labels, jpeg=jpeg )
     test_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/test.txt'], mode='test', transform=transforms.ToTensor(),
-                            num_labels=num_labels, jpeg=jpeg, coeff=coeff)
+                            num_labels=num_labels, jpeg=jpeg)
 
     def training_mode():
         return model + '_' 'JPEG_' * jpeg + f'_{num_labels}_' + cur_time
@@ -356,8 +328,8 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    #demo('histnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
-    #     jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
+    demo('dctnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
+         jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
