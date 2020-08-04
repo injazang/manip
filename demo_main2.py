@@ -282,9 +282,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     csvs = glob(f'{datadir}/*.txt')
     print(csvs)
     # Datasets
-    val_set = ManipDataset(datadir=datadir, csvs=csvs[6:], mode='val', transform=transforms.ToTensor(),
+    val_set = ManipDataset(datadir=datadir, csvs=f'{datadir}/val.txt', mode='val', transform=transforms.ToTensor(),
                            num_labels=num_labels, jpeg=jpeg, coeff=coeff )
-    test_set = ManipDataset(datadir=datadir, csvs=csvs[5:6], mode='test', transform=transforms.ToTensor(),
+    test_set = ManipDataset(datadir=datadir, csvs=f'{datadir}/test.txt', mode='test', transform=transforms.ToTensor(),
                             num_labels=num_labels, jpeg=jpeg, coeff=coeff)
 
     def training_mode():
@@ -344,7 +344,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
     if training == 'train':
         # Train the model
-        train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=csvs[0:5], val_set=val_set, test_set=test_set, num_labels=num_labels,
+        train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=f'{datadir}/*_jpg.txt', val_set=val_set, test_set=test_set, num_labels=num_labels,
               logger=logger, model_dir=model_dir, epoch=epoch, best_error=best_error,
               n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=coeff)
 
