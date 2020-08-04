@@ -110,11 +110,12 @@ class BlockType4(nn.Module):
 
 
 class SRNet(nn.Module):
-    def __init__(self,scale, num_labels, jpeg=False,load=False, groups=True ):
+    def __init__(self,scale, num_labels, jpeg=False,load=False, groups=True, finetune=False ):
         super(SRNet, self).__init__()
         self.scale = scale
         self.num_labels = num_labels
         self.load = load
+        self.finetune = finetune
         self.augment = augment()
         self.groups = groups
         if self.scale==4:
@@ -161,8 +162,12 @@ class SRNet(nn.Module):
             self.layer4 = self._make_layer(BlockType4, [512], groups=1)
 
         self.gvp = nn.AdaptiveAvgPool2d((1, 1))
+        if finetune==True:
+            self.fc2 = nn.Linear(512, 1, bias=False)
 
-        self.fc = nn.Linear(512, self.num_labels, bias=False)
+        else:
+            self.fc = nn.Linear(512, self.num_labels, bias=False)
+
         self.conv_weights = []
         self.non_conv_weights = []
         self.jpeg=jpeg
@@ -214,6 +219,11 @@ class SRNet(nn.Module):
         x = x.view(x.size(0), -1)
         if not self.load:
 
-            x = self.fc(x)
+            if self.finetune:
+                x = self.fc2(x)
+
+            else:
+                x = self.fc(x)
+
         return x
 
