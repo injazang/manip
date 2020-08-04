@@ -73,7 +73,7 @@ class ManipDataset(Dataset):
 
     def compress(self, path, qf=None):
         name = os.path.basename(path).split('.')[0]
-        folder = path.split('\\')[-2]
+        folder = path.split('/')[-2]
         temp_dir = f'{self.datadir}/{self.mode}'
         im_name = os.path.join(temp_dir, f'{folder}_{name}.jpg')
 
