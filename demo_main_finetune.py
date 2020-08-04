@@ -281,15 +281,13 @@ def test(model, test_set, logger, batch_size=32):
                       % (test_loss, test_error * 100))
 
 
-def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', coeff=False,
+def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', coeff=False, datadir='',
          jpeg=False):
     torch.cuda.set_device(gpu)
     # Settings
     if not os.path.exists('trained'): os.makedirs('trained')
     cur_time = datetime.now().strftime(r'%y-%m-%d_%H-%M')
-    datadir = '../data/dfdc'
-    csvs = glob(r'E:\Proposals\data\manip\*.txt')
-
+    
     # Datasets
     val_set = ImageFolder(f'{datadir}/val', transform=transforms.Compose([Resize((128,128), interpolation=PIL.Image.BICUBIC), ToTensor()]))
     test_set = ImageFolder(f'{datadir}/test', transform=transforms.Compose([Resize((128,128), interpolation=PIL.Image.BICUBIC), ToTensor()]))
