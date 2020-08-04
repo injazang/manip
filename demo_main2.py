@@ -282,9 +282,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     csvs = glob(f'{datadir}/*.txt')
     print(csvs)
     # Datasets
-    val_set = ManipDataset(datadir=datadir, csvs=f'{datadir}/val.txt', mode='val', transform=transforms.ToTensor(),
+    val_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/val.txt'], mode='val', transform=transforms.ToTensor(),
                            num_labels=num_labels, jpeg=jpeg, coeff=coeff )
-    test_set = ManipDataset(datadir=datadir, csvs=f'{datadir}/test.txt', mode='test', transform=transforms.ToTensor(),
+    test_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/test.txt'], mode='test', transform=transforms.ToTensor(),
                             num_labels=num_labels, jpeg=jpeg, coeff=coeff)
 
     def training_mode():
@@ -356,8 +356,8 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    #demo('histnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
-    #'     jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
+    demo('histnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
+         jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
