@@ -308,7 +308,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
     elif model is 'dctnet':
         from models.SRNet_DCT_scale import SRNet
-        model = SRNet(scale=4, num_labels=num_labels, groups=False).cuda()
+        model = SRNet(scale=4, num_labels=num_labels, groups=True).cuda()
         optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
 
     elif model is 'histnet':
