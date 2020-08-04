@@ -111,7 +111,7 @@ class ManipDataset(Dataset):
             return im, im_c
         else:
             im = self.compress(path, jpeg)
-            im= randCrop(im, self.mode)
+            im= randCrop(im, mode=self.mode)
             im = self.transform(im)
             #im_c = torch.from_numpy(im_c).view(1, 128, 128)
             return im

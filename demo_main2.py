@@ -47,8 +47,8 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
 
         # compute gradient and do step
         optimizer.zero_grad()
-        #with amp.scale_loss(loss, optimizer) as scaled_loss:
-        #    scaled_loss.backward()
+        with amp.scale_loss(loss, optimizer) as scaled_loss:
+            scaled_loss.backward()
         #loss.backward()
         optimizer.step()
 
@@ -318,7 +318,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
         # Train the model
         train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=glob(f'{datadir}/*_jpg.txt'), val_set=val_set, test_set=test_set, num_labels=num_labels,
               logger=logger, model_dir=model_dir, epoch=epoch, best_error=best_error,
-              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=coeff)
+              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=False)
 
 
     else:
@@ -329,7 +329,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 if __name__ == '__main__':
     demo('dctnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
-         jpeg=True, coeff=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
+         jpeg=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
