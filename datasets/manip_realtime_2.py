@@ -219,7 +219,7 @@ if __name__ == "__main__":
                 continue
 
     '''
-
+    '''
 
     files = [open(f'E:/Proposals/data/manip/{i}/{i}.txt', 'r') for i in range(5)]
     val = open(r'E:\Proposals\data\manip\val.txt', 'w')
@@ -250,3 +250,66 @@ if __name__ == "__main__":
             im = Image.open(f'{png}/{s}/{n}.png')
             jpg_files[i].write(f'{s}\t{n}\t{f}\t{m}\t{p}\t{q}\n')
             im.save(f'{write_fie}/train/{s}_{n}.jpg', 'jpeg', quality=q)
+    
+    '''
+    datadir='E:/Proposals/data/'
+    jpgdir = 'E:/Proposals/jpgs'
+    write_file = os.path.join(datadir, 'nonmanips')
+    os.makedirs(write_file, exist_ok=True)
+    os.makedirs(os.path.join(write_file, 'train'), exist_ok=True)
+    os.makedirs(os.path.join(write_file, 'test'), exist_ok=True)
+    os.makedirs(os.path.join(write_file, 'val'), exist_ok=True)
+
+    original_dir = os.path.join(datadir, 'original')
+
+    jpg_files =  [open(os.path.join(jpgdir, f'{i}_jpg.txt'), 'r') for i in range(5)]
+    val = open(os.path.join(jpgdir,'val.txt'), 'r')
+    test = open(os.path.join(jpgdir, 'test.txt'), 'r')
+    nonmanip_files = [open(os.path.join(write_file, f'{i}_jpg.txt'), 'w') for i in range(5)]
+    val2 = open(os.path.join(write_file, 'val.txt'), 'w')
+    test2 = open(os.path.join(write_file, 'test.txt'), 'w')
+
+
+    for i in range(5):
+        lines = jpg_files[i].readlines()
+        num_linse = len(lines)
+        nonmanip_files[i].write('split\tname\tmanip\ttype\tparam\tjpeg\n')
+        for line in lines[1:]:
+            try:
+
+                s, n, f, m, p, j = line.split()
+                q = random.randrange(70, 95)
+                im = Image.open(os.path.join(original_dir,f'{n}.png'))
+                nonmanip_files[i].write(f'{s}\t{n}\t{-1}\t{m}\t{p}\t{q}\n')
+                im.save(f'{write_file}/train/{s}_{n}.jpg', 'jpeg', quality=q)
+            except:
+                continue
+
+    lines = val.readlines()
+    num_linse = len(lines)
+    val2.write('split\tname\tmanip\ttype\tparam\tjpeg\n')
+    for line in lines[1:]:
+        try:
+
+            s, n, f, m, p, j = line.split()
+            q = random.randrange(70, 95)
+            im = Image.open(os.path.join(original_dir, f'{n}.png'))
+            val2.write(f'{s}\t{n}\t{-1}\t{m}\t{p}\t{q}\n')
+            im.save(f'{write_file}/val/{s}_{n}.jpg', 'jpeg', quality=q)
+        except:
+            continue
+
+    lines = test.readlines()
+    num_linse = len(lines)
+    test2.write('split\tname\tmanip\ttype\tparam\tjpeg\n')
+
+    for line in lines[1:]:
+        try:
+
+            s, n, f, m, p, j = line.split()
+            q = random.randrange(70, 95)
+            im = Image.open(os.path.join(original_dir, f'{n}.png'))
+            test2.write(f'{s}\t{n}\t{-1}\t{m}\t{p}\t{q}\n')
+            im.save(f'{write_file}/test/{s}_{n}.jpg', 'jpeg', quality=q)
+        except:
+            continue
