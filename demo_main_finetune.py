@@ -273,8 +273,8 @@ def test(model, test_set, logger, batch_size=32):
                       % (test_loss, test_error * 100))
 
 
-def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', coeff=False, datadir='',
-         jpeg=False):
+def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, datadir='',
+         load_dct=None):
     torch.cuda.set_device(gpu)
     # Settings
     if not os.path.exists('trained'): os.makedirs('trained')
@@ -322,21 +322,35 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     best_error = 1
     lr=1e-4
     wd =1e-5
-    if load:
-        last_checkpoint_path = glob(os.path.join(model_dir, '*.tar'))[-1]
+    def last_ckpt(directory):
+        ckpts = sorted( glob(directory), key=os.path.getmtime)
+        return ckpts[-1]
+
+    if load_dct:
+        last_checkpoint_path = last_ckpt(os.path.join('trained', load_dct, '*.tar'))
         print(last_checkpoint_path)
         checkpoint = torch.load(last_checkpoint_path)
-        #epoch = checkpoint['epoch'] + 1
-        #best_error = checkpoint['error']
+
         model.load_state_dict(checkpoint['model_state_dict'],strict=False)
-        #optimizer.load_state_dict(checkpoint['opt_state_dict'])
-        #lr = checkpoint['lr']
-        #wd = checkpoint['wd']
-        #amp.load_state_dict(checkpoint['amp'])
-        #for state in optimizer.state.values():
-        #    for k, v in state.items():
-        #        if isinstance(v, torch.Tensor):
-        #            state[k] = v.cuda()
+
+
+        logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
+
+    if load:
+        last_checkpoint_path = last_ckpt(os.path.join(model_dir, '*.tar'))
+        print(last_checkpoint_path)
+        checkpoint = torch.load(last_checkpoint_path)
+        epoch = checkpoint['epoch'] + 1
+        best_error = checkpoint['error']
+        model.load_state_dict(checkpoint['model_state_dict'],strict=False)
+        optimizer.load_state_dict(checkpoint['opt_state_dict'])
+        lr = checkpoint['lr']
+        wd = checkpoint['wd']
+        amp.load_state_dict(checkpoint['amp'])
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.cuda()
 
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
 
@@ -354,7 +368,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    #demo('dctnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=1, jpeg=True, coeff=True,load='dctnet_JPEG__20_20-07-26_16-31')
+    #demo('dctnet', gpu=0, training='train', datadir='../data/dfdc', n_epochs=200, batch_size=64, num_labels=1, load=None, load_dct='dctnet_JPEG__20_20-07-26_16-31')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
