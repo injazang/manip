@@ -175,7 +175,7 @@ class HistNet(nn.Module):
         return output
 
     def forward(self, input, prob):
-        im, im_c = input
+        im_c = input
         hist = self.hist(im_c, 10)
 
         x = self.layer1(hist)
