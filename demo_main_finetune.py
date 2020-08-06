@@ -11,13 +11,12 @@ from datetime import datetime
 from glob import glob
 from torchvision import transforms
 from torchvision.transforms import ToTensor, Resize
-from datasets import Mixer
 import numpy as np
 import PIL
 import random
 
 
-def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, mixer, use_mix='mix', print_freq=100, mix_batch_prob=0,
+def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix', print_freq=100, mix_batch_prob=0,
                 mix_spatial_prob=0):
     batch_time = AverageMeter()
     losses = AverageMeter()
@@ -27,12 +26,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, mixer, use_mi
     model.train()
     criterion = torch.nn.BCEWithLogitsLoss()
 
-    if use_mix == 'mix':
-        print(f'mix_enabled, {mix_batch_prob},{mix_spatial_prob}')
-    else:
-        print('only paired')
-        mix_batch_prob = 0
-        mix_spatial_prob = 0
+
 
     end = time.time()
     for batch_idx, inputs in enumerate(loader):
@@ -159,8 +153,8 @@ def set_lr_wd(optim, lr, wd):
         param_group['weight_decay'] = wd
 
 
-def train(model, optimizer, train_csvs, train_set, val_set, test_set, logger, model_dir, epoch, best_error, lr=0.0, wd=0.0, fine_tune=False,
-          num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', mix_batch_prob=0, mix_spatial_prob=0, jpeg=True, coeff=False):
+def train(model, optimizer, train_set, val_set, test_set, logger, model_dir, epoch, best_error, lr=0.0, wd=0.0, fine_tune=False,
+          num_labels=16, n_epochs=200, batch_size=32 ):
     # Define loader
 
     train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
@@ -174,7 +168,6 @@ def train(model, optimizer, train_csvs, train_set, val_set, test_set, logger, mo
 
     val_loader = torch.utils.data.DataLoader(val_set, batch_sampler=val_sampler, pin_memory=(torch.cuda.is_available()),
                                              num_workers=4, collate_fn=collate_fn)
-    mixer = Mixer.mixer(use_mix=True)
     # Model on cuda
     if torch.cuda.is_available():
         model = model.cuda()
@@ -207,8 +200,7 @@ def train(model, optimizer, train_csvs, train_set, val_set, test_set, logger, mo
             optimizer=optimizer,
             epoch=epoch,
             n_epochs=n_epochs,
-            mixer=mixer,
-            use_mix=use_mix, mix_batch_prob=mix_batch_prob, mix_spatial_prob=mix_spatial_prob
+
         )
 
         _, valid_loss, valid_error = test_epoch(
@@ -287,7 +279,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     # Settings
     if not os.path.exists('trained'): os.makedirs('trained')
     cur_time = datetime.now().strftime(r'%y-%m-%d_%H-%M')
-    
+
     # Datasets
     val_set = ImageFolder(f'{datadir}/val', transform=transforms.Compose([Resize((128,128), interpolation=PIL.Image.BICUBIC), ToTensor()]))
     test_set = ImageFolder(f'{datadir}/test', transform=transforms.Compose([Resize((128,128), interpolation=PIL.Image.BICUBIC), ToTensor()]))
@@ -350,9 +342,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
     if training == 'train':
         # Train the model
-        train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=csvs[0:5], train_set=train_set, val_set=val_set, test_set=test_set, num_labels=num_labels,
+        train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_set=train_set, val_set=val_set, test_set=test_set, num_labels=num_labels,
               logger=logger, model_dir=model_dir, epoch=epoch, best_error=best_error,
-              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=coeff)
+              n_epochs=n_epochs, batch_size=batch_size)
 
 
     else:
