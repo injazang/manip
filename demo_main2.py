@@ -47,9 +47,9 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
 
         # compute gradient and do step
         optimizer.zero_grad()
-        with amp.scale_loss(loss, optimizer) as scaled_loss:
-            scaled_loss.backward()
-        #loss.backward()
+        #with amp.scale_loss(loss, optimizer) as scaled_loss:
+        #    scaled_loss.backward()
+        loss.backward()
         optimizer.step()
 
         # measure elapsed time
@@ -142,8 +142,8 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
         n_epochs = 200
     count = 0
     if lr is 0.0:
-        lr = 1e-4
-        wd = 1e-5
+        lr = 1e-3
+        wd = 1e-4
     if epoch==0:
         set_lr_wd(optimizer,lr, wd)
     # Train model
@@ -194,7 +194,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                 'opt_state_dict': optimizer.state_dict(),
                 'lr' : lr,
                 'wd' : wd,
-                'amp': amp.state_dict()
+                #'amp': amp.state_dict()
             }, best_epoch_dir)
             count = 0
         else:
@@ -275,21 +275,23 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     # Model
     if model is 'srnet':
         from models.SRNet import SRNet
-        model = SRNet(num_labels).cuda()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
+        model = SRNet(num_labels)
 
-    elif model is 'dctnet':
+    elif model is 'dctgroup':
         from models.SRNet_DCT_scale import SRNet
-        model = SRNet(scale=4, num_labels=num_labels, groups=True).cuda()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
+        model = SRNet(scale=4, num_labels=num_labels, groups=True)
+    elif model is 'dct':
+        from models.SRNet_DCT_scale import SRNet
+        model = SRNet(scale=4, num_labels=num_labels, groups=False)
 
     elif model is 'histnet':
         from models.histNet import HistNet
-        model = HistNet(num_labels=num_labels).cuda()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
+        model = HistNet(num_labels=num_labels)
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
 
     logger.log_string(model.__str__())
-    model, optimizer = amp.initialize(model, optimizer)
+    #model, optimizer = amp.initialize(model, optimizer)
 
     # Optimizer
     epoch = 0
@@ -307,16 +309,17 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
         epoch = checkpoint['epoch'] + 1
         best_error = checkpoint['error']
         model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['opt_state_dict'])
-        lr = checkpoint['lr']
-        wd = checkpoint['wd']
-        amp.load_state_dict(checkpoint['amp'])
-        for state in optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.cuda()
+        #optimizer.load_state_dict(checkpoint['opt_state_dict'])
+        #lr = checkpoint['lr']
+        #wd = checkpoint['wd']
+        #amp.load_state_dict(checkpoint['amp'])
+        #for state in optimizer.state.values():
+        #    for k, v in state.items():
+        #        if isinstance(v, torch.Tensor):
+        #            state[k] = v.cuda()
 
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
+    model = torch.nn.DataParallel(model, device_ids=gpu).cuda()
 
     if training == 'train':
         # Train the model
