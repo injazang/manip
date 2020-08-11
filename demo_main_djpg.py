@@ -130,7 +130,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                                 drop_last=True, shuffle=False)
 
     val_loader = torch.utils.data.DataLoader(val_set, batch_sampler=val_sampler, pin_memory=(torch.cuda.is_available()),
-                                             num_workers=4)
+                                             num_workers=4, collate_fn = collate_fn)
     # Model on cuda
     if torch.cuda.is_available():
         model = model.cuda()
@@ -146,7 +146,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
         train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
                                       drop_last=True, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, batch_sampler=train_sampler,
-                                                   pin_memory=(torch.cuda.is_available()), num_workers=4)
+                                                   pin_memory=(torch.cuda.is_available()), num_workers=4, collate_fn=collate_fn)
 
         if count==10:
             lr /=2
@@ -220,7 +220,7 @@ def test(model, test_set, logger, batch_size=32):
     if torch.cuda.is_available():
         model = model.cuda()
 
-    test_loader = torch.utils.data.DataLoader(test_set, batch_sampler=test_sampler, pin_memory=(torch.cuda.is_available()), num_workers=4)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_sampler=test_sampler, pin_memory=(torch.cuda.is_available()), num_workers=4, collate_fn = collate_fn)
     _, test_loss, test_error = test_epoch(
         model=model,
         loader=test_loader,
@@ -250,7 +250,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     # Datasets
     val_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/val.txt', f'{origdir}/val.txt'], mode='val')
 
-    test_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/test.txt', f'{origdir}/test.txt'], mode='val')
+    test_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/test.txt', f'{origdir}/test.txt'], mode='test')
 
     def training_mode():
         return model + '_' + f'DCT{scale}_' + f'JPEGMANIP_' + cur_time
@@ -280,7 +280,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
 
     logger.log_string(model.__str__())
     model, optimizer = amp.initialize(model, optimizer)
-
+    model = torch.nn.DataParallel(model, device_ids=[0])
     # Optimizer
     epoch = 0
     best_error = 1
@@ -292,7 +292,8 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     if load:
         last_checkpoint_path = last_ckpt(os.path.join(model_dir, '*.tar'))
         print(last_checkpoint_path)
-        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}', strict=False)
+        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
+        model.load_state_dict(checkpoint['model_state_dict'], strict=False)
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
 
 
@@ -309,7 +310,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     logger.log_string('Done!')
 
 if __name__ == '__main__':
-    #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=10, fine_tune=False, manipdir='../jpgs', origdir='../data/nonmanips')
+    demo('ensenble', gpu=0, training='test',n_epochs=200, batch_size=20, fine_tune=False, load = 'ensenble_DCT4_20_20-08-05_13-37', manipdir=r'E:\Proposals\jpgs', origdir=r'E:\Proposals\nonmanips')
     #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load=None, load_dct='dctnet_DCT4_5_20-07-06_01-13', load_hist='histnet_JPEG_20-06-21_14-54')
 
     #demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-unwiward', batch_size=16, use_mix='mix')

@@ -112,7 +112,7 @@ class ManipDataset(Dataset):
         return s
 
     def __getitem__(self, idx):
-        if idx > self.len_csvs[0]:
+        if idx >= self.len_csvs[0]:
             csv = self.csvs[1]
             label=torch.tensor(1)
             datadir = self.origdir

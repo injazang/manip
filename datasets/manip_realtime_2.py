@@ -1,15 +1,15 @@
 import torch
 from torch.utils.data import DataLoader
 import torchvision.datasets as dset
-from tfrecord.torch.dataset import TFRecordDataset, MultiTFRecordDataset
+
 import io
 from PIL import Image, ImageFilter, ImageOps
 import cv2
 from torchvision import transforms
 import random
 import numpy as np
-from skimage.restoration import (denoise_wavelet, estimate_sigma)
-from skimage.util import random_noise
+#from skimage.restoration import (denoise_wavelet, estimate_sigma)
+#from skimage.util import random_noise
 import glob
 import time
 
@@ -252,8 +252,8 @@ if __name__ == "__main__":
             im.save(f'{write_fie}/train/{s}_{n}.jpg', 'jpeg', quality=q)
     
     '''
-    datadir='E:/Proposals/data/'
-    jpgdir = 'E:/Proposals/jpgs'
+    datadir='/Data/jpgs'
+    jpgdir = '/Data/jpgs/manip'
     write_file = os.path.join(datadir, 'nonmanips')
     os.makedirs(write_file, exist_ok=True)
     os.makedirs(os.path.join(write_file, 'train'), exist_ok=True)

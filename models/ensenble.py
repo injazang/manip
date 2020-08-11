@@ -19,7 +19,7 @@ class ensenble(nn.Module):
 
         self.act1 = nn.ReLU(inplace=True)
         self.drop2 = nn.Dropout(0.3)
-        self.fc2 = nn.Linear(1024, num_labels, bias=False)
+        self.fc = nn.Linear(1024, num_labels, bias=False)
 
         self.augment=augment()
         self.trainable_parameters=[]
@@ -55,6 +55,6 @@ class ensenble(nn.Module):
         out = self.fc1(out)
         out = self.act1(out)
         out = self.drop2(out)
-        out =self.fc2(out)
+        out =self.fc(out)
         return out
 

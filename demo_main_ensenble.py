@@ -128,7 +128,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                                 drop_last=True, shuffle=False)
 
     val_loader = torch.utils.data.DataLoader(val_set, batch_sampler=val_sampler, pin_memory=(torch.cuda.is_available()),
-                                             num_workers=4)
+                                             num_workers=4,  collate_fn=collate_fn)
     # Model on cuda
     if torch.cuda.is_available():
         model = model.cuda()
@@ -145,7 +145,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
         train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
                                       drop_last=True, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, batch_sampler=train_sampler,
-                                                   pin_memory=(torch.cuda.is_available()), num_workers=4)
+                                                   pin_memory=(torch.cuda.is_available()), num_workers=4,  collate_fn=collate_fn)
 
         if count==10:
             lr /=2
@@ -219,7 +219,7 @@ def test(model, test_set, logger, batch_size=32):
     if torch.cuda.is_available():
         model = model.cuda()
 
-    test_loader = torch.utils.data.DataLoader(test_set, batch_sampler=test_sampler, pin_memory=(torch.cuda.is_available()), num_workers=4)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_sampler=test_sampler, pin_memory=(torch.cuda.is_available()), num_workers=4, collate_fn=collate_fn )
     _, test_loss, test_error = test_epoch(
         model=model,
         loader=test_loader,
@@ -230,6 +230,10 @@ def test(model, test_set, logger, batch_size=32):
     # Log results
     logger.log_string("[*] End of Training:  test_loss: %.4f, test_error: %.2f"
                 % (test_loss, test_error*100))
+
+def collate_fn(batch):
+    batch = list(filter(lambda x: x is not None, batch))
+    return torch.utils.data.dataloader.default_collate(batch)
 
 def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, batch_size=32, use_mix='mix', jpeg=False, load_dct=None, load_hist=None, num_labels=5, datadir='' ):
     torch.cuda.set_device(gpu)
@@ -283,16 +287,18 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     epoch = 0
     best_error = 1
     def last_ckpt(directory):
+        print(directory)
         ckpts = glob(directory)
-        ckpts = sorted(ckpts, os.path.getmtime)
+        ckpts = sorted(ckpts,key= os.path.getmtime)
+        print(ckpts)
         return ckpts[-1]
 
     if load is None:
-        last_checkpoint_path = last_ckpt(os.path.join('trained/'+load_dct, '*.tar'))
+        last_checkpoint_path = last_ckpt(os.path.join(load_dct, '*.tar'))
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
         checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
         srmodel.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        last_checkpoint_path =   last_ckpt(os.path.join('trained/'+load_hist, '*.tar'))
+        last_checkpoint_path =   last_ckpt(os.path.join(load_hist, '*.tar'))
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
         checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
         histmodel.load_state_dict(checkpoint['model_state_dict'], strict=False)
@@ -308,18 +314,18 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
         epoch = checkpoint['epoch'] + 1
         best_error = checkpoint['error']
         model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        optimizer.load_state_dict(checkpoint['opt_state_dict'])
-        amp.load_state_dict(checkpoint['amp'])
-        lr = checkpoint['lr']
-        wd = checkpoint['wd']
-        for param in srmodel.parameters():
-            param.requires_grad=False
-        for param in histmodel.parameters():
-            param.requires_grad=False
-        for state in optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.cuda()
+        #optimizer.load_state_dict(checkpoint['opt_state_dict'])
+        #amp.load_state_dict(checkpoint['amp'])
+        #lr = checkpoint['lr']
+        #wd = checkpoint['wd']
+        #for param in srmodel.parameters():
+        #    param.requires_grad=False
+        #for param in histmodel.parameters():
+        #    param.requires_grad=False
+        #for state in optimizer.state.values():
+        #    for k, v in state.items():
+        #        if isinstance(v, torch.Tensor):
+        #            state[k] = v.cuda()
 
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
 
@@ -337,7 +343,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     logger.log_string('Done!')
 
 if __name__ == '__main__':
-    #demo('ensenble', gpu=0, training='test',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load='ensenble_DCT4_16_20-07-13_11-59', load_dct='dctnet_DCT4_16_20-07-12_13-21', load_hist='histnet_DCT4_16_20-07-03_13-36')
+    demo('ensenble', gpu=0, training='test',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load='hist', load_dct=None, load_hist=None, datadir=r'E:\Proposals\jpgs')
     #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load=None, load_dct='dctnet_DCT4_5_20-07-06_01-13', load_hist='histnet_JPEG_20-06-21_14-54')
 
     #demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-unwiward', batch_size=16, use_mix='mix')

@@ -236,7 +236,7 @@ def test(model, test_set, logger, batch_size=32):
         model=model,
         loader=test_loader,
         logger=logger,
-        is_test=False, confusion=True
+        is_test=False
     )
 
     # Log results
@@ -297,7 +297,11 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     lr=1e-4
     wd =1e-5
     if load:
-        last_checkpoint_path = glob(os.path.join(model_dir, '*.tar'))[-1]
+        ckpts= glob(os.path.join(model_dir, '*.tar'))
+        ckpts=sorted(ckpts, key=os.path.getmtime)
+
+        last_checkpoint_path = ckpts[-1]
+
         print(last_checkpoint_path)
         checkpoint = torch.load(last_checkpoint_path)
         epoch = checkpoint['epoch'] + 1
@@ -328,8 +332,8 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    demo('dctnet', gpu=0, training='train', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
-         jpeg=True, load=None, datadir='../jpgs')#'dctnet_JPEG__20_20-07-26_16-31')
+    demo('dctnet', gpu=0, training='test', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
+         jpeg=True, load='dctnet_JPEG__20_20-08-04_22-39', datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
