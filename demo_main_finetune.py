@@ -43,7 +43,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
         # measure accuracy and record loss
         batch_size = target.size(0)
         pred = output.cpu().squeeze()
-        error.update(torch.ne(pred>0, target.cpu().squeeze()).sum().item() / (batch_size),
+        error.update(torch.ne(pred>0, (target==1).cpu().squeeze()).sum().item() / (batch_size),
                      batch_size)
         losses.update(loss.item(), batch_size)
 
@@ -121,7 +121,7 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True, confusion = Fa
             batch_size = target.size(0)
             pred = output.cpu().squeeze()
             target = target.cpu().squeeze()
-            error.update(torch.ne(pred>0, target.cpu().squeeze()).sum().item() / (batch_size),
+            error.update(torch.ne(pred>0, (target==1).cpu().squeeze()).sum().item() / (batch_size),
                          batch_size)
             losses.update(loss.item(), batch_size)
             if confusion:
@@ -265,7 +265,7 @@ def test(model, test_set, logger, batch_size=32):
         model=model,
         loader=test_loader,
         logger=logger,
-        is_test=False, confusion=True
+        is_test=False
     )
 
     # Log results
@@ -306,7 +306,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
     elif model is 'dctnet':
         from models.SRNet_DCT_scale import SRNet
-        model = SRNet(scale=4, num_labels=1, groups=False, finetune=True).cuda()
+        model = SRNet(scale=4, num_labels=1, groups=True, finetune=True).cuda()
         optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
 
     elif model is 'histnet':
@@ -339,7 +339,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     if load:
         last_checkpoint_path = last_ckpt(os.path.join(model_dir, '*.tar'))
         print(last_checkpoint_path)
-        checkpoint = torch.load(last_checkpoint_path)
+        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
         epoch = checkpoint['epoch'] + 1
         best_error = checkpoint['error']
         model.load_state_dict(checkpoint['model_state_dict'],strict=False)
@@ -368,7 +368,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    #demo('dctnet', gpu=0, training='train', datadir='../data/dfdc', n_epochs=200, batch_size=64, num_labels=1, load=None, load_dct='dctnet_JPEG__20_20-07-26_16-31')
+    demo('dctnet', gpu=0, training='test', datadir=r'E:\Proposals\data\dfdc', n_epochs=200, batch_size=64, num_labels=1, load='dctnet_dfdc_20-08-06_18-42', load_dct=None)
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
