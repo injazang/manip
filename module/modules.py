@@ -2,21 +2,22 @@ import torch.nn as nn
 import torch
 import numpy as np
 
+
 class dct2d_Conv_Layer(nn.Module):
     def __init__(self, scale, start, num_filters):
         super(dct2d_Conv_Layer, self).__init__()
         self.scale = scale
         self.start = start
-        self.num_filters = num_filters // 3
+        self.num_filters= num_filters//3
         self.dct_base = self.load_DCT_basis()
-        self.conv1, self.conv2, self.conv3 = self.dct2d_Conv(), self.dct2d_Conv(), self.dct2d_Conv()
+        self.dctConvs = [ self.dct2d_Conv(),  self.dct2d_Conv(),  self.dct2d_Conv()]
 
-        for conv in [self.conv1, self.conv2, self.conv3]:
-            conv.weight = nn.Parameter(torch.from_numpy(self.dct_base).float())
-            conv.weight.requires_grad = False
+        for conv in self.dctConvs:
+            conv.weight.data = self.dct_base
+            conv.weight.requires_grad=False
         self.swap = []
         for i in range(self.num_filters):
-            self.swap += [i, i + self.num_filters, i + self.num_filters * 2]
+            self.swap+=[i, i+self.num_filters, i+self.num_filters * 2]
 
     def cal_scale(self, p, q):
         if p == 0:
@@ -42,28 +43,27 @@ class dct2d_Conv_Layer(nn.Module):
     def load_DCT_basis(self):
         basis_64 = np.zeros((self.num_filters, self.scale, self.scale))
         idx = 0
-        for i in range(self.scale * 2 - 1):
-            cur = max(0, i - self.scale + 1)
-            for j in range(cur, i - cur + 1):
+        for i in range(self.scale * 2-1):
+            cur = max(0, i-self.scale+1)
+            for j in range(cur,i-cur + 1):
                 if idx >= self.num_filters + self.start:
-                    return basis_64.reshape((self.num_filters, 1, self.scale, self.scale))
+                    return torch.from_numpy(basis_64).view(self.num_filters, 1, self.scale, self.scale).cuda().float()
                 if idx >= self.start:
-                    basis_64[idx - self.start, :, :] = self.cal_basis(j, i - j)
+                    basis_64[idx-self.start, :, :] = self.cal_basis(j, i - j)
                 idx = idx + 1
                 if idx >= self.num_filters + self.start:
-                    return basis_64.reshape((self.num_filters, 1, self.scale, self.scale))
+                    return torch.from_numpy(basis_64).view(self.num_filters, 1, self.scale, self.scale).cuda().float()
 
     def dct2d_Conv(self):
         return nn.Conv2d(in_channels=1, out_channels=self.num_filters, kernel_size=self.scale, stride=self.scale // 2,
                          padding_mode='replicate', bias=False)
 
     def forward(self, input):
-        # bs, _,_,_ = input.shape()
-        # input.view(bs*(128//self.scale)**2, 3, self.scale,self.scale)
-        dct_outs = torch.cat([self.conv1(input[:, 0:1, ...]), self.conv2(input[:, 1:2, ...]), self.conv3(input[:, 2:3, ...])], dim=1)
-        dct_reallocate = torch.cat([dct_outs[:, index:index + 1, ...] for index in self.swap], dim=1)
+        #bs, _,_,_ = input.shape()
+        #input.view(bs*(128//self.scale)**2, 3, self.scale,self.scale)
+        dct_outs= torch.cat([self.dctConvs[i](input[:,i:i+1,...]) for i in range(3)], dim=1)
+        dct_reallocate = torch.cat([dct_outs[:,index:index+1,...] for index in self.swap], dim=1)
         return dct_reallocate
-
 
 
 

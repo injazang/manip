@@ -335,7 +335,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    demo('dctnet', gpu=0, training='test', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
+    demo('dctnet', gpu=[0,1], training='test', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
          jpeg=True, load='dctnet_JPEG__20_20-08-04_22-39', datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)

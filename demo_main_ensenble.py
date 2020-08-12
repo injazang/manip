@@ -236,7 +236,6 @@ def collate_fn(batch):
     return torch.utils.data.dataloader.default_collate(batch)
 
 def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, batch_size=32, use_mix='mix', jpeg=False, load_dct=None, load_hist=None, num_labels=5, datadir='' ):
-    torch.cuda.set_device(gpu)
     # Settings
     if not os.path.exists('trained'): os.makedirs('trained')
     cur_time = datetime.now().strftime(r'%y-%m-%d_%H-%M')
@@ -248,7 +247,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     wd = 1e-5
     # Datasets
 
-
+    print(f'{datadir}/val.txt')
     # Datasets
     val_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/val.txt'], mode='val', transform=transforms.ToTensor(), coeff=True,
                            num_labels=num_labels, jpeg=jpeg)
@@ -271,17 +270,15 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     # Model
     from models.SRNet_DCT_scale import SRNet
     from models.histNet import HistNet
-    srmodel = SRNet(scale=4, num_labels=num_labels, load=True, groups=True).cuda()
-    histmodel = HistNet(num_labels=num_labels, load=True).cuda()
+    srmodel = SRNet(scale=4, num_labels=num_labels, load=True, groups=True)
+    histmodel = HistNet(num_labels=num_labels, load=True)
 
     from models.ensenble import ensenble
-    model = ensenble(srmodel,histmodel, num_labels=num_labels).cuda()
-
+    model = ensenble(srmodel,histmodel, num_labels=num_labels)
     optimizer = torch.optim.AdamW(model.trainable_parameters, lr=1,  weight_decay=0)
 
 
     logger.log_string(model.__str__())
-    model, optimizer = amp.initialize(model, optimizer)
 
     # Optimizer
     epoch = 0
@@ -294,41 +291,30 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
         return ckpts[-1]
 
     if load is None:
-        last_checkpoint_path = last_ckpt(os.path.join(load_dct, '*.tar'))
+        last_checkpoint_path = last_ckpt(os.path.join('trained', load_dct, '*.tar'))
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
-        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
+        checkpoint = torch.load(last_checkpoint_path, map_location=f'cpu')
         srmodel.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        last_checkpoint_path =   last_ckpt(os.path.join(load_hist, '*.tar'))
+        last_checkpoint_path =   last_ckpt(os.path.join('trained', load_hist, '*.tar'))
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
-        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
+        checkpoint = torch.load(last_checkpoint_path, map_location=f'cpu')
         histmodel.load_state_dict(checkpoint['model_state_dict'], strict=False)
         for param in srmodel.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
         for param in histmodel.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
 
     if load:
         last_checkpoint_path = glob(os.path.join(model_dir, '*.tar'))[-1]
         print(last_checkpoint_path)
-        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
+        checkpoint = torch.load(last_checkpoint_path, map_location=f'cpu')
         epoch = checkpoint['epoch'] + 1
         best_error = checkpoint['error']
         model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        #optimizer.load_state_dict(checkpoint['opt_state_dict'])
-        #amp.load_state_dict(checkpoint['amp'])
-        #lr = checkpoint['lr']
-        #wd = checkpoint['wd']
-        #for param in srmodel.parameters():
-        #    param.requires_grad=False
-        #for param in histmodel.parameters():
-        #    param.requires_grad=False
-        #for state in optimizer.state.values():
-        #    for k, v in state.items():
-        #        if isinstance(v, torch.Tensor):
-        #            state[k] = v.cuda()
 
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
 
+    model = torch.nn.DataParallel(model, device_ids=gpu).cuda()
 
     if training=='train':
         # Train the model
@@ -343,10 +329,10 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     logger.log_string('Done!')
 
 if __name__ == '__main__':
-    demo('ensenble', gpu=0, training='test',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load='hist', load_dct=None, load_hist=None, datadir=r'E:\Proposals\jpgs')
+    demo('ensenble', gpu=[0], training='test',n_epochs=200, batch_size=10, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load=None, load_dct='dctnet', load_hist='histnet_JPEG__20_20-07-27_19-32', datadir=r'E:\Proposals\jpgs')
     #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load=None, load_dct='dctnet_DCT4_5_20-07-06_01-13', load_hist='histnet_JPEG_20-06-21_14-54')
 
     #demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-unwiward', batch_size=16, use_mix='mix')
-    fire.Fire(demo)
+    #fire.Fire(demo)
     #python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
     #demo(model = 'zhunet',gpu = 0,datadir ='../spatial', fine_tune='fine', training = 'train',bpnzac = '0.3' ,algo = 's-uniward',batch_size = 4,use_mix ='mix', load='zhunet_mix_s-uniward_0.4_20-05-15_15-12')

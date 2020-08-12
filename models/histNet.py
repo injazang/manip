@@ -168,7 +168,7 @@ class HistNet(nn.Module):
         im_c[im_c>threshold] =threshold
         output=[]
         for i in range(threshold+1):
-            template = torch.zeros(size=[bs,1,w,h]).cuda().float()
+            template = torch.zeros(size=[bs,1,w,h]).float().cuda()
             template[im_c == i] = 1
             output.append(template)
         output = torch.cat(output,dim=1)
