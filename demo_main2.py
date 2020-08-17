@@ -150,7 +150,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
     for epoch in range(epoch, n_epochs):
 
         train_set = ManipDataset(datadir=val_set.datadir, csvs=train_csvs[epoch % 5:epoch % 5 + 1], mode='train',
-                                 num_labels=num_labels, transform=transforms.ToTensor(), jpeg=jpeg)
+                                 num_labels=num_labels, transform=transforms.ToTensor(), jpeg=jpeg, coeff=coeff)
         train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
                                       drop_last=True, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, batch_sampler=train_sampler,
@@ -244,10 +244,11 @@ def test(model, test_set, logger, batch_size=32):
                       % (test_loss, test_error * 100))
 
 
-def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', datadir='',
-         jpeg=False):
-    torch.cuda.set_device(gpu)
+def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', datadir='',
+         jpeg=False, coeff=False):
     # Settings
+    if gpu is None:
+        gpu = [0]
     if not os.path.exists('trained'): os.makedirs('trained')
     cur_time = datetime.now().strftime(r'%y-%m-%d_%H-%M')
     #datadir = 'E:\Proposals\data\manip'
@@ -255,9 +256,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     print(csvs)
     # Datasets
     val_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/val.txt'], mode='val', transform=transforms.ToTensor(),
-                           num_labels=num_labels, jpeg=jpeg )
+                           num_labels=num_labels, jpeg=jpeg , coeff= coeff)
     test_set = ManipDataset(datadir=datadir, csvs=[f'{datadir}/test.txt'], mode='test', transform=transforms.ToTensor(),
-                            num_labels=num_labels, jpeg=jpeg)
+                            num_labels=num_labels, jpeg=jpeg, coeff= coeff)
 
     def training_mode():
         return model + '_' 'JPEG_' * jpeg + f'_{num_labels}_' + cur_time
@@ -287,7 +288,9 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
     elif model is 'histnet':
         from models.histNet import HistNet
         model = HistNet(num_labels=num_labels)
-
+    elif model is 'h2':
+        from models.histNet2 import HistNet
+        model = HistNet(num_labels=num_labels)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
 
     logger.log_string(model.__str__())
@@ -325,7 +328,7 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
         # Train the model
         train(lr=lr, wd=wd, model=model, optimizer=optimizer, train_csvs=glob(f'{datadir}/*_jpg.txt'), val_set=val_set, test_set=test_set, num_labels=num_labels,
               logger=logger, model_dir=model_dir, epoch=epoch, best_error=best_error,
-              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff=False)
+              n_epochs=n_epochs, batch_size=batch_size, jpeg=jpeg, coeff= coeff)
 
 
     else:
@@ -335,8 +338,8 @@ def demo(model, gpu, training='train', load=None, num_labels=16, n_epochs=200, b
 
 
 if __name__ == '__main__':
-    demo('dctnet', gpu=[0,1], training='test', n_epochs=200, batch_size=64, use_mix='mix', num_labels=20,
-         jpeg=True, load='dctnet_JPEG__20_20-08-04_22-39', datadir=r'E:\Proposals\jpgs')
+    demo(model='dctgroup', gpu=[0], training='train', n_epochs=200, batch_size=100, use_mix='mix', num_labels=20, coeff=False,
+         jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True

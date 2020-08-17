@@ -180,6 +180,8 @@ class SRNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
+                if m.kernel_size==(self.scale,self.scale):
+                    continue
                 nn.init.kaiming_uniform_(m.weight)
                 #nn.init.constant_(m.bias, 0.2)
 
