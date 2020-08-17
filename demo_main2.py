@@ -32,7 +32,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
     for batch_idx, inputs in enumerate(loader):
         # Create vaiables
         if torch.cuda.is_available():
-            im = inputs['im'].cuda()
+            im = inputs['im_c'].cuda()
             target = inputs['label'].cuda().long().view(-1)
 
         # compute output
@@ -84,7 +84,7 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
     with torch.no_grad():
         for batch_idx, inputs in enumerate(loader):
             if torch.cuda.is_available():
-                im = inputs['im'].cuda()
+                im = inputs['im_c'].cuda()
                 target = inputs['label'].cuda().long().view(-1)
 
 
