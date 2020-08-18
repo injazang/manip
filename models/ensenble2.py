@@ -42,8 +42,9 @@ class ensenble(nn.Module):
         super(ensenble, self).__init__()
         self.model1= model1
         self.model2 = model2
-        self.inplanes=512
         self.inplanes=1024
+        self.layer4 = self._make_layer(BlockType4, [1024, ], groups=1)
+
         self.gvp1 = nn.AdaptiveAvgPool2d((1, 1))
         self.gvp = nn.AdaptiveAvgPool2d((1, 1))
 

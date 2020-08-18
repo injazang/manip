@@ -42,9 +42,9 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, print_freq=1)
 
         # compute gradient and do step
         optimizer.zero_grad()
-        with amp.scale_loss(loss, optimizer) as scaled_loss:
-            scaled_loss.backward()
-        #loss.backward()
+        #with amp.scale_loss(loss, optimizer) as scaled_loss:
+        #    scaled_loss.backward()
+        loss.backward()
         optimizer.step()
 
         # measure elapsed time
@@ -186,7 +186,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                 'opt_state_dict': optimizer.state_dict(),
                 'lr' : lr,
                 'wd' : wd,
-                'amp': amp.state_dict()
+                #'amp': amp.state_dict()
             }, best_epoch_dir)
             count = 0
         else:
@@ -331,7 +331,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     logger.log_string('Done!')
 
 if __name__ == '__main__':
-    #demo('ensenble', gpu=[0], training='train',n_epochs=200, batch_size=10, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load=None, load_dct='dctnet', load_hist='hist2', datadir=r'E:\Proposals\jpgs')
+    demo('ensenble', gpu=[0], training='train',n_epochs=200, batch_size=10, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load=None, load_dct='dctnet', load_hist='hist2', datadir=r'E:\Proposals\jpgs')
     #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load=None, load_dct='dctnet_DCT4_5_20-07-06_01-13', load_hist='histnet_JPEG_20-06-21_14-54')
 
     #demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-unwiward', batch_size=16, use_mix='mix')
