@@ -42,18 +42,18 @@ class ensenble(nn.Module):
         super(ensenble, self).__init__()
         self.model1= model1
         self.model2 = model2
-        self.inplanes=1024
-        self.layer4 = self._make_layer(BlockType4, [1024, ], groups=1)
+        self.inplanes=640
+        self.layer4 = self._make_layer(BlockType4, [1280, ], groups=1)
 
         self.gvp1 = nn.AdaptiveAvgPool2d((1, 1))
         self.gvp = nn.AdaptiveAvgPool2d((1, 1))
 
-        self.fc1 = nn.Linear(1024, 1024, bias=False)
-        self.drop1 = nn.Dropout(0.3)
+        #self.fc1 = nn.Linear(1024, 1024, bias=False)
+        #self.drop1 = nn.Dropout(0.3)
 
-        self.act1 = nn.ReLU(inplace=True)
-        self.drop2 = nn.Dropout(0.3)
-        self.fc = nn.Linear(1024, num_labels, bias=False)
+        #self.act1 = nn.ReLU(inplace=True)
+        #self.drop2 = nn.Dropout(0.3)
+        self.fc = nn.Linear(1280, num_labels, bias=False)
 
         self.augment=augment()
         self.trainable_parameters=[]
@@ -89,10 +89,10 @@ class ensenble(nn.Module):
         out = self.gvp(out)
 
         out = out.view(out.size(0), -1)
-        out = self.drop1(out)
-        out = self.fc1(out)
-        out = self.act1(out)
-        out = self.drop2(out)
+        #out = self.drop1(out)
+        #out = self.fc1(out)
+        #out = self.act1(out)
+        #out = self.drop2(out)
         out =self.fc(out)
         return out
 

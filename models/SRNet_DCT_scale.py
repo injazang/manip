@@ -214,10 +214,11 @@ class SRNet(nn.Module):
         x_ = self.layer2_1(x_)
         x_ = self.layer3_1(x_)
         x = torch.cat([x,x_],dim=1)
-        x = nn.functional.normalize(x, p=2)
-        x = self.layer4(x)
+
 
         if not self.load:
+            x = nn.functional.normalize(x, p=2)
+            x = self.layer4(x)
             x = self.gvp(x)  # torch.cat([self.gvp8(x8), self.gvp16(x16)], dim=1)
             x = x.view(x.size(0), -1)
             if self.finetune:

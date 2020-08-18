@@ -181,9 +181,9 @@ class HistNet(nn.Module):
         x = self.layer1(hist)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
 
         if not self.load:
+            x = self.layer4(x)
             x = self.gvp(x)
             x = x.view(x.size(0), -1)
             x = self.fc(x)
