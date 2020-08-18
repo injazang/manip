@@ -32,7 +32,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
     for batch_idx, inputs in enumerate(loader):
         # Create vaiables
         if torch.cuda.is_available():
-            im = inputs['im_c'].cuda()
+            im = inputs['im'].cuda()
             target = inputs['label'].cuda().long().view(-1)
 
         # compute output
@@ -84,7 +84,7 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
     with torch.no_grad():
         for batch_idx, inputs in enumerate(loader):
             if torch.cuda.is_available():
-                im = inputs['im_c'].cuda()
+                im = inputs['im'].cuda()
                 target = inputs['label'].cuda().long().view(-1)
 
 
@@ -311,7 +311,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         checkpoint = torch.load(last_checkpoint_path)
         epoch = checkpoint['epoch'] + 1
         best_error = checkpoint['error']
-        model.load_state_dict(checkpoint['model_state_dict'])
+        model.load_state_dict(checkpoint['model_state_dict'], strict=False)
         #optimizer.load_state_dict(checkpoint['opt_state_dict'])
         #lr = checkpoint['lr']
         #wd = checkpoint['wd']
@@ -338,8 +338,8 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
 
 if __name__ == '__main__':
-    demo(model='dctgroup', gpu=[0], training='train', n_epochs=200, batch_size=100, use_mix='mix', num_labels=20, coeff=False,
-         jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
+    demo(model='dctgroup', gpu=[0], training='test', n_epochs=200, batch_size=100, use_mix='mix', num_labels=20, coeff=False,
+         jpeg=True, load='dctnet', datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True

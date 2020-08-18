@@ -131,7 +131,7 @@ class HistNet(nn.Module):
         self.name = 'srnet'
         self.layer1 = self._make_layer(Preprocess, [64], groups=1)
         self.layer2 = self._make_layer(BlockType2, [64, 64, 64, 64], groups=1)
-        self.layer3 = self._make_layer(BlockType3, [64, 128, 256], groups=1)
+        self.layer3 = self._make_layer(BlockType3, [64, 64, 128, 256], groups=1)
         self.layer4 = self._make_layer(BlockType4, [512, ], groups=1)
         self.gvp = nn.AdaptiveAvgPool2d((1, 1))
         self.load=load
@@ -182,9 +182,9 @@ class HistNet(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        x = self.gvp(x)
-        x = x.view(x.size(0), -1)
-        if not self.load:
 
+        if not self.load:
+            x = self.gvp(x)
+            x = x.view(x.size(0), -1)
             x = self.fc(x)
         return x
