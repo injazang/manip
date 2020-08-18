@@ -288,10 +288,10 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
         checkpoint = torch.load(last_checkpoint_path, map_location=f'cpu')
         histmodel.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        for param in srmodel.parameters():
-            param.requires_grad = False
-        for param in histmodel.parameters():
-            param.requires_grad = False
+        #for param in srmodel.parameters():
+            #param.requires_grad = False
+        #for param in histmodel.parameters():
+            #param.requires_grad = False
 
 
     from models.ensenble2 import ensenble
@@ -331,7 +331,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     logger.log_string('Done!')
 
 if __name__ == '__main__':
-    #demo('ensenble', gpu=[0], training='train',n_epochs=200, batch_size=10, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load=None, load_dct='dctnet', load_hist='hist2', datadir=r'E:\Proposals\jpgs')
+    demo('ensenble', gpu=[0], training='train',n_epochs=200, batch_size=10, fine_tune=False, use_mix='mix',  num_labels=20, jpeg=True, load=None, load_dct='dctnet', load_hist='hist2', datadir=r'E:\Proposals\jpgs')
     #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load=None, load_dct='dctnet_DCT4_5_20-07-06_01-13', load_hist='histnet_JPEG_20-06-21_14-54')
 
     #demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-unwiward', batch_size=16, use_mix='mix')
