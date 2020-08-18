@@ -63,11 +63,12 @@ class ensenble(nn.Module):
             else:
                 self.trainable_parameters.append(param)
 
-        for m in self.modules():
+        for m in [self.layer4, self.fc]:
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_uniform_(m.weight)
                 #nn.init.constant_(m.bias, 0.2)
-
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, mean=0.0, std=0.01)
 
     def _make_layer(self, block, num_filters, groups=1):
         layers = []
