@@ -288,10 +288,10 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
         checkpoint = torch.load(last_checkpoint_path, map_location=f'cpu')
         histmodel.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        for param in srmodel.parameters():
-            param.requires_grad = False
-        for param in histmodel.parameters():
-            param.requires_grad = False
+        #for param in srmodel.parameters():
+            #param.requires_grad = False
+        #for param in histmodel.parameters():
+            #param.requires_grad = False
 
 
     from models.ensenble2 import ensenble
