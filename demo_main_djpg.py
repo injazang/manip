@@ -232,14 +232,10 @@ def test(model, test_set, logger, batch_size=32):
     logger.log_string("[*] End of Training:  test_loss: %.4f, test_error: %.2f"
                 % (test_loss, test_error*100))
 
-def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, batch_size=32, manipdir='', origdir='' ):
-    torch.cuda.set_device(gpu)
+def demo(model, gpu, training='train',load=None,fine_tune=True, num_labels=20, n_epochs=200, batch_size=32, manipdir='', origdir='' ):
     # Settings
     if not os.path.exists('trained'): os.makedirs('trained')
     cur_time = datetime.now().strftime(r'%y-%m-%d_%H-%M')
-    #datadir = f'C:\mmc\inja\ManiData'
-    manip_csvs = glob(f'{manipdir}/*.txt')
-    orig_csvs = glob(f'{origdir}/*.txt')
 
     scale = 4
     lr = 1e-4
@@ -249,7 +245,6 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
 
     # Datasets
     val_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/val.txt', f'{origdir}/val.txt'], mode='val')
-
     test_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/test.txt', f'{origdir}/test.txt'], mode='test')
 
     def training_mode():
@@ -264,26 +259,22 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
 
     # Define logger
     logger = Logger(model_dir)
-
-
-    # Model
     from models.SRNet_DCT_scale import SRNet
     from models.histNet import HistNet
-    srmodel = SRNet(scale=4, num_labels=20, load=True, groups=True).cuda()
-    histmodel = HistNet(num_labels=20, load=True).cuda()
+    srmodel = SRNet(scale=4, num_labels=20, load=True, groups=True)
+    histmodel = HistNet(num_labels=20, load=True)
 
-    from models.ensenble import ensenble
-    model = ensenble(srmodel,histmodel, num_labels=1).cuda()
-
-    optimizer = torch.optim.AdamW(model.trainable_parameters, lr=1,  weight_decay=0)
-
+    from models.ensenble2 import ensenble
+    model = ensenble(srmodel, histmodel, num_labels=num_labels, finetune=True)
+    optimizer = torch.optim.AdamW(model.trainable_parameters, lr=1, weight_decay=0)
 
     logger.log_string(model.__str__())
     model, optimizer = amp.initialize(model, optimizer)
-    model = torch.nn.DataParallel(model, device_ids=[0])
+    model = torch.nn.DataParallel(model, device_ids=gpu)
     # Optimizer
     epoch = 0
     best_error = 1
+
     def last_ckpt(directory):
         ckpts = glob(directory)
         ckpts = sorted(ckpts, key=os.path.getmtime)
@@ -292,7 +283,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     if load:
         last_checkpoint_path = last_ckpt(os.path.join(model_dir, '*.tar'))
         print(last_checkpoint_path)
-        checkpoint = torch.load(last_checkpoint_path, map_location=f'cuda:{gpu}')
+        checkpoint = torch.load(last_checkpoint_path)
         model.load_state_dict(checkpoint['model_state_dict'], strict=False)
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
 
@@ -310,7 +301,7 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, n_epochs=200, ba
     logger.log_string('Done!')
 
 if __name__ == '__main__':
-    demo('ensenble', gpu=0, training='test',n_epochs=200, batch_size=20, fine_tune=False, load = 'ensenble_DCT4_20_20-08-05_13-37', manipdir=r'E:\Proposals\jpgs', origdir=r'E:\Proposals\nonmanips')
+    #demo('ensenble', gpu=0, training='test',n_epochs=200, batch_size=20, fine_tune=False, load = 'ensenble_DCT4_20_20-08-05_13-37', manipdir=r'E:\Proposals\jpgs', origdir=r'E:\Proposals\nonmanips')
     #demo('ensenble', gpu=0, training='train',n_epochs=200, batch_size=100, fine_tune=False, use_mix='mix',  num_labels=16, jpeg=True, load=None, load_dct='dctnet_DCT4_5_20-07-06_01-13', load_hist='histnet_JPEG_20-06-21_14-54')
 
     #demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-unwiward', batch_size=16, use_mix='mix')
