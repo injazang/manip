@@ -187,7 +187,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                 'opt_state_dict': optimizer.state_dict(),
                 'lr' : lr,
                 'wd' : wd,
-                'amp': amp.state_dict()
+               # 'amp': amp.state_dict()
             }, best_epoch_dir)
             count = 0
         else:
