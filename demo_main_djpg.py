@@ -42,9 +42,9 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, print_freq=1)
 
         # compute gradient and do step
         optimizer.zero_grad()
-        with amp.scale_loss(loss, optimizer) as scaled_loss:
-            scaled_loss.backward()
-        #loss.backward()
+        #with amp.scale_loss(loss, optimizer) as scaled_loss:
+        #    scaled_loss.backward()
+        loss.backward()
         optimizer.step()
 
         # measure elapsed time
