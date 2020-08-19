@@ -38,10 +38,11 @@ class BlockType4(nn.Module):
         return out
 
 class ensenble(nn.Module):
-    def __init__(self,model1, model2, num_labels):
+    def __init__(self,model1, model2, num_labels, finetune=False):
         super(ensenble, self).__init__()
         self.model1= model1
         self.model2 = model2
+        self.finetune = finetune
         self.inplanes=640
         self.layer4 = self._make_layer(BlockType4, [1280, ], groups=1)
 
@@ -54,6 +55,7 @@ class ensenble(nn.Module):
         #self.act1 = nn.ReLU(inplace=True)
         #self.drop2 = nn.Dropout(0.3)
         self.fc = nn.Linear(1280, num_labels, bias=False)
+        self.fc2 = nn.Linear(1280, 2, bias=False)
 
         self.augment=augment()
         self.trainable_parameters=[]
@@ -90,10 +92,7 @@ class ensenble(nn.Module):
         out = self.gvp(out)
 
         out = out.view(out.size(0), -1)
-        #out = self.drop1(out)
-        #out = self.fc1(out)
-        #out = self.act1(out)
-        #out = self.drop2(out)
-        out =self.fc(out)
+        if self.finetune:
+            out =self.fc2(out)
         return out
 

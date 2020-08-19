@@ -244,8 +244,8 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, num_labels=20, n
 
 
     # Datasets
-    val_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/val.txt', f'{origdir}/val.txt'], mode='val')
-    test_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/test.txt', f'{origdir}/test.txt'], mode='test')
+    #val_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/val.txt', f'{origdir}/val.txt'], mode='val')
+    #test_set = ManipDataset(manipdir=manipdir, origdir=origdir, csvs=[f'{manipdir}/test.txt', f'{origdir}/test.txt'], mode='test')
 
     def training_mode():
         return model + '_' + f'DCT{scale}_' + f'JPEGMANIP_' + cur_time
@@ -269,7 +269,6 @@ def demo(model, gpu, training='train',load=None,fine_tune=True, num_labels=20, n
     optimizer = torch.optim.AdamW(model.trainable_parameters, lr=1, weight_decay=0)
 
     logger.log_string(model.__str__())
-    model, optimizer = amp.initialize(model, optimizer)
     model = torch.nn.DataParallel(model, device_ids=gpu)
     # Optimizer
     epoch = 0
