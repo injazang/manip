@@ -69,6 +69,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
             logger.log_string(res)
         del loss, output, im, target
     # Return summary statistics
+    model._modules['module'].constraint()
     return batch_time.avg, losses.avg, error.avg
 
 def test_epoch(model, loader, logger, print_freq=1, is_test=True):
