@@ -100,7 +100,7 @@ class MantrNet(nn.Module):
         self.pre.srm.weight.requires_grad = False
         self.mask =np.zeros([3,3,5,5])
         self.mask[:,:,2,2]=1
-        self.mask = nn.Parameter(torch.from_numpy(self.mask))
+        self.mask = nn.Parameter(torch.from_numpy(self.mask).float())
         self.mask.requires_grad=False
         #self.constraint()
 
