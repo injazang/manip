@@ -288,6 +288,9 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
     elif model is 'histnet':
         from models.histNet import HistNet
         model = HistNet(num_labels=num_labels)
+    elif model is 'xcep':
+        from models.XceptionNet import Xception
+        model = Xception(num_classes=num_labels)
     elif model is 'h2':
         from models.histNet2 import HistNet
         model = HistNet(num_labels=num_labels)
@@ -338,8 +341,8 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
 
 if __name__ == '__main__':
-    demo(model='dctgroup', gpu=[0], training='test', n_epochs=200, batch_size=100, use_mix='mix', num_labels=20, coeff=False,
-         jpeg=True, load='dctnet', datadir=r'E:\Proposals\jpgs')
+    #demo(model='xcep', gpu=[0], training='train', n_epochs=200, batch_size=10, use_mix='mix', num_labels=20, coeff=False,
+    #     jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
