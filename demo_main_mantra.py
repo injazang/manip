@@ -57,8 +57,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        if batch_idx>100:
-            break
+
         # print stats
         if batch_idx % print_freq == 0:
             res = '\t'.join([
