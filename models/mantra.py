@@ -102,7 +102,7 @@ class MantrNet(nn.Module):
         self.mask[:,:,2,2]=1
         self.mask = nn.Parameter(torch.from_numpy(self.mask))
         self.mask.requires_grad=False
-        self.constraint()
+        #self.constraint()
 
     def constraint(self):
         w = self.pre.bayar.weight.data

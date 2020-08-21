@@ -38,6 +38,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
             target = inputs['label'].cuda().view(-1,1,1).repeat(1,128,128).long()
 
         # compute output
+        model._modules['module'].constraint()
         output = model(im, random.random())
         loss = criterion(output, target)
         # measure accuracy and record loss
@@ -53,7 +54,6 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
         #    scaled_loss.backward()
         loss.backward()
         optimizer.step()
-        model._modules['module'].constraint()
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -352,7 +352,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
 
 if __name__ == '__main__':
-    #demo(model='mantra', gpu=[0], training='train', n_epochs=200, batch_size=5, use_mix='mix', num_labels=20,          coeff=False,          jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
+    #demo(model='mantra', gpu=[0], training='train', n_epochs=200, batch_size=5, use_mix='mix', num_labels=20,          coeff=False,   jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
