@@ -77,6 +77,7 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
     batch_time = AverageMeter()
     losses = AverageMeter()
     error = AverageMeter()
+    error2 = AverageMeter()
 
     # Model on eval mode
     model.eval()
@@ -88,6 +89,7 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
             if torch.cuda.is_available():
                 im = inputs['im'].cuda()
                 target = inputs['label'].cuda().view(-1,1,1).repeat(1,128,128).long()
+                target2 = inputs['label'].cuda().view(-1)
 
             # compute output
             output = model(im, 1)
@@ -96,8 +98,11 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
             # measure accuracy and record loss
             batch_size = target.size(0)
             pred = output.cpu().squeeze()
+            pred2 = torch.mode(pred.argmax(dim=1).view(-1, 128*128))[0]
             error.update(torch.ne(pred.argmax(dim=1), target.cpu().squeeze()).sum().item() / (batch_size*128*128),
                          batch_size)
+            error2.update(torch.ne(pred2, target2.cpu()).sum().item() / batch_size)
+
             losses.update(loss.item(), batch_size)
 
             # measure elapsed time
@@ -112,6 +117,8 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
                     'Time %.3f (%.3f)' % (batch_time.val, batch_time.avg),
                     'Loss %.4f (%.4f)' % (losses.val, losses.avg),
                     'Error %.4f (%.4f)' % (error.val, error.avg),
+                    'Error Mean %.4f (%.4f)' % (error2.val, error2.avg),
+
                 ])
                 logger.log_string(res)
 
@@ -351,7 +358,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
 
 if __name__ == '__main__':
-    #demo(model='mantra', gpu=[0], training='train', n_epochs=200, batch_size=5, use_mix='mix', num_labels=20,          coeff=False,   jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
+    #demo(model='mantra', gpu=[0], training='test', n_epochs=200, batch_size=5, use_mix='mix', num_labels=20,          coeff=False,   jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
