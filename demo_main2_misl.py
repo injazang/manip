@@ -35,7 +35,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
             im = inputs['im'].cuda()
             target = inputs['label'].cuda().long().view(-1)
 
-        model._modules['module'].constraint()
+       # model._modules['module'].constraint()
         # compute output
         output = model(im, random.random())
         loss = criterion(output, target)
@@ -69,7 +69,7 @@ def train_epoch(model, loader, logger, optimizer, epoch, n_epochs, use_mix='mix'
             logger.log_string(res)
         del loss, output, im, target
     # Return summary statistics
-    model._modules['module'].constraint()
+   # model._modules['module'].constraint()
     return batch_time.avg, losses.avg, error.avg
 
 def test_epoch(model, loader, logger, print_freq=1, is_test=True):
