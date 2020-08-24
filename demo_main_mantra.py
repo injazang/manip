@@ -311,6 +311,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         from models.mantra import MantrNet
         model = MantrNet()
     optimizer = torch.optim.AdamW(model.parameters(), lr=1, weight_decay=0)
+    model = torch.nn.DataParallel(model, device_ids=gpu).cuda()
 
     logger.log_string(model.__str__())
     # model, optimizer = amp.initialize(model, optimizer)
@@ -341,7 +342,6 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         #            state[k] = v.cuda()
 
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
-    model = torch.nn.DataParallel(model, device_ids=gpu).cuda()
 
     if training == 'train':
         # Train the model
