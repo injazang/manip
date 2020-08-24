@@ -89,7 +89,7 @@ def test_epoch(model, loader, logger, print_freq=1, is_test=True):
             if torch.cuda.is_available():
                 im = inputs['im'].cuda()
                 target = inputs['label'].cuda().view(-1,1,1).repeat(1,128,128).long()
-                target2 = inputs['label'].cuda().view(-1)
+                target2 = inputs['label'].cuda().view(-1).long()
 
             # compute output
             output = model(im, 1)
