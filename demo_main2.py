@@ -245,7 +245,7 @@ def test(model, test_set, logger, batch_size=32):
 
 
 def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', datadir='',
-         jpeg=False, coeff=False):
+         jpeg=False, coeff=False, scale=4):
     # Settings
     if gpu is None:
         gpu = [0]
@@ -284,6 +284,9 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
     elif model is 'dct':
         from models.SRNet_DCT_scale import SRNet
         model = SRNet(scale=4, num_labels=num_labels, groups=False)
+    elif model is 'dctscale':
+        from models.SRNet_DCT_scale2 import SRNet
+        model = SRNet(scale=scale, num_labels=num_labels, groups=False)
 
     elif model is 'histnet':
         from models.histNet import HistNet
@@ -298,6 +301,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
     logger.log_string(model.__str__())
     #model, optimizer = amp.initialize(model, optimizer)
+    model = torch.nn.DataParallel(model, device_ids=gpu).cuda()
 
     # Optimizer
     epoch = 0
@@ -325,7 +329,6 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         #            state[k] = v.cuda()
 
         logger.log_string('Model loaded:{}'.format(last_checkpoint_path))
-    model = torch.nn.DataParallel(model, device_ids=gpu).cuda()
 
     if training == 'train':
         # Train the model
@@ -341,8 +344,8 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
 
 if __name__ == '__main__':
-    #demo(model='xcep', gpu=[0], training='train', n_epochs=200, batch_size=10, use_mix='mix', num_labels=20, coeff=False,
-    #     jpeg=True, load=None, datadir=r'E:\Proposals\jpgs')
+    #demo(model='dctscale', scale=8, gpu=[0], training='train', n_epochs=200, batch_size=50, use_mix='mix', num_labels=20, coeff=False,
+    #     jpeg=True, datadir=r'E:\Proposals\jpgs')
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
