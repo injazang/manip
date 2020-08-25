@@ -131,7 +131,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
                                 drop_last=True, shuffle=False)
 
     val_loader = torch.utils.data.DataLoader(val_set, batch_sampler=val_sampler, pin_memory=(torch.cuda.is_available()),
-                                             num_workers=4, collate_fn=collate_fn)
+                                             num_workers=8, collate_fn=collate_fn)
     # Model on cuda
     if torch.cuda.is_available():
         model = model.cuda()
@@ -154,7 +154,7 @@ def train(model, optimizer, train_csvs, val_set, test_set, logger, model_dir, ep
         train_sampler = ConcatSampler(dataset=train_set, sampler=RandomSampler, batch_size=batch_size,
                                       drop_last=True, shuffle=True)
         train_loader = torch.utils.data.DataLoader(train_set, batch_sampler=train_sampler,
-                                                   pin_memory=(torch.cuda.is_available()), num_workers=4, collate_fn=collate_fn)
+                                                   pin_memory=(torch.cuda.is_available()), num_workers=8, collate_fn=collate_fn)
 
         if count==10:
             lr /=2
@@ -245,7 +245,7 @@ def test(model, test_set, logger, batch_size=32):
 
 
 def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', datadir='',
-         jpeg=False, coeff=False, scale=4, groups=True):
+         jpeg=False, coeff=False, scale=4, stride=True, groups=True):
     # Settings
     if gpu is None:
         gpu = [0]
@@ -286,7 +286,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         model = SRNet(scale=4, num_labels=num_labels, groups=False)
     elif model is 'dctscale':
         from models.SRNet_DCT_scale2 import SRNet
-        model = SRNet(scale=scale, num_labels=num_labels, groups=groups)
+        model = SRNet(scale=scale, num_labels=num_labels, groups=groups, stride=stride)
 
     elif model is 'histnet':
         from models.histNet import HistNet
@@ -319,9 +319,9 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         epoch = checkpoint['epoch'] + 1
         best_error = checkpoint['error']
         model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-        #optimizer.load_state_dict(checkpoint['opt_state_dict'])
-        #lr = checkpoint['lr']
-        #wd = checkpoint['wd']
+        optimizer.load_state_dict(checkpoint['opt_state_dict'])
+        lr = checkpoint['lr']
+        wd = checkpoint['wd']
         #amp.load_state_dict(checkpoint['amp'])
         #for state in optimizer.state.values():
         #    for k, v in state.items():
@@ -344,8 +344,8 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
 
 
 if __name__ == '__main__':
-    #demo(model='dctscale', scale=8, gpu=[0], training='train', n_epochs=200, batch_size=50, use_mix='mix', num_labels=20, coeff=False,
-    #     jpeg=True, datadir=r'E:\Proposals\jpgs')
+    #demo(model='dctscale', scale=8, gpu=[0], training='train', n_epochs=200, batch_size=200, use_mix='mix', num_labels=20, coeff=False,
+    #     jpeg=True, datadir=r'E:\Proposals\jpgs', stride=False)
     # demo(model='zhunet', gpu=1, train_dir=r'../spatial/train', val_dir=r'../spatial/val', bpnzac='0.4', algo='s-uniward', batch_size=16, use_mix='mix')
     fire.Fire(demo)
     # python demo.py --model='zhunet' --gpu=1 --train_dir='../spatial/train' --val_dir='../spatial/val' --bpnzac='0.4' --algo='s-uniward' --batch_size=32 --use_mix=True
