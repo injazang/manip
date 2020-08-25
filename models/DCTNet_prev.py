@@ -5,12 +5,16 @@ import torch.nn.functional as F
 import torch_dct as dct
 
 class dct2d_Conv_Layer(nn.Module):
-    def __init__(self, scale, start, num_filters):
+    def __init__(self, scale, start, num_filters, stride=True):
         super(dct2d_Conv_Layer, self).__init__()
         self.scale = scale
         self.start = start
         self.num_filters = num_filters // 3
         self.dct_base = self.load_DCT_basis()
+        if stride:
+            self.stride = self.scale//2
+        else:
+            self.stride=self.scale
         self.conv1, self.conv2, self.conv3 = self.dct2d_Conv(), self.dct2d_Conv(), self.dct2d_Conv()
 
         for conv in [self.conv1, self.conv2, self.conv3]:
@@ -56,7 +60,7 @@ class dct2d_Conv_Layer(nn.Module):
                     return basis_64.reshape((self.num_filters, 1, self.scale, self.scale))
 
     def dct2d_Conv(self):
-        return nn.Conv2d(in_channels=1, out_channels=self.num_filters, kernel_size=self.scale, stride=self.scale // 2,
+        return nn.Conv2d(in_channels=1, out_channels=self.num_filters, kernel_size=self.scale, stride=self.stride,
                          bias=False)
 
     def forward(self, input):

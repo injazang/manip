@@ -110,7 +110,7 @@ class BlockType4(nn.Module):
 
 
 class SRNet(nn.Module):
-    def __init__(self,scale, num_labels, jpeg=False,load=False, groups=True, finetune=False ):
+    def __init__(self,scale, num_labels, jpeg=False,load=False, groups=True, stride=True, finetune=False ):
         super(SRNet, self).__init__()
         self.scale = scale
         self.num_labels = num_labels
@@ -124,7 +124,7 @@ class SRNet(nn.Module):
         self.inplanes = self.scale**2*3
         self.name = 'srdct'
 
-        self.dct = dct2d_Conv_Layer(scale=scale, start=0, num_filters=self.scale**2*3)
+        self.dct = dct2d_Conv_Layer(scale=scale, start=0, num_filters=self.scale**2*3, stride=stride)
         self.layer1 = self._make_layer(BlockType1, [self.scale**2*3, 96, 32], groups=[self.groups,1,1])
         self.layer2 = self._make_layer(BlockType2, [32,32,32,32,32,32,32], groups=[1,1,1,1,1,1])
         self.layer3 = self._make_layer(BlockType3, [32,64,128], groups=[1,1,1])
