@@ -117,12 +117,15 @@ class SRNet(nn.Module):
         self.load = load
         self.finetune = finetune
         self.augment = augment()
-        self.groups = groups
+        if groups:
+            self.groups = 4
+        else:
+            self.groups=1
         self.inplanes = self.scale**2*3
         self.name = 'srdct'
 
         self.dct = dct2d_Conv_Layer(scale=scale, start=0, num_filters=self.scale**2*3)
-        self.layer1 = self._make_layer(BlockType1, [self.scale**2*3, 96, 32], groups=[4,1,1])
+        self.layer1 = self._make_layer(BlockType1, [self.scale**2*3, 96, 32], groups=[self.groups,1,1])
         self.layer2 = self._make_layer(BlockType2, [32,32,32,32,32,32,32], groups=[1,1,1,1,1,1])
         self.layer3 = self._make_layer(BlockType3, [32,64,128], groups=[1,1,1])
         self.layer4 = self._make_layer(BlockType4, [512, ], groups=[1])
