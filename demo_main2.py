@@ -245,7 +245,7 @@ def test(model, test_set, logger, batch_size=32):
 
 
 def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epochs=200, batch_size=32, use_mix='mix', datadir='',
-         jpeg=False, coeff=False, scale=4):
+         jpeg=False, coeff=False, scale=4, groups=True):
     # Settings
     if gpu is None:
         gpu = [0]
@@ -286,7 +286,7 @@ def demo(model=None, gpu=None, training='train', load=None, num_labels=16, n_epo
         model = SRNet(scale=4, num_labels=num_labels, groups=False)
     elif model is 'dctscale':
         from models.SRNet_DCT_scale2 import SRNet
-        model = SRNet(scale=scale, num_labels=num_labels, groups=False)
+        model = SRNet(scale=scale, num_labels=num_labels, groups=groups)
 
     elif model is 'histnet':
         from models.histNet import HistNet
